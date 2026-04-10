@@ -1,71 +1,91 @@
 from django.core.management.base import BaseCommand
-from django.contrib.auth import get_user_model
-from djongo import models
+from octofit_tracker.models import User, Team, Workout
 
-# Define models for teams, activities, leaderboard, and workouts
-class Team(models.Model):
-    name = models.CharField(max_length=100, unique=True)
-    class Meta:
-        app_label = 'octofit_tracker'
-
-class Activity(models.Model):
-    user = models.CharField(max_length=100)
-    team = models.CharField(max_length=100)
-    type = models.CharField(max_length=100)
-    duration = models.IntegerField()
-    class Meta:
-        app_label = 'octofit_tracker'
-
-class Leaderboard(models.Model):
-    team = models.CharField(max_length=100)
-    points = models.IntegerField()
-    class Meta:
-        app_label = 'octofit_tracker'
-
-class Workout(models.Model):
-    name = models.CharField(max_length=100)
-    description = models.TextField()
-    suggested_for = models.CharField(max_length=100)
-    class Meta:
-        app_label = 'octofit_tracker'
-
-User = get_user_model()
 
 class Command(BaseCommand):
-    help = 'Populate the octofit_db database with test data'
+    help = "Populate the octofit_db database with safe test data"
 
     def handle(self, *args, **kwargs):
-        # Clear existing data
-        User.objects.all().delete()
-        Team.objects.all().delete()
-        Activity.objects.all().delete()
-        Leaderboard.objects.all().delete()
-        Workout.objects.all().delete()
+        self.stdout.write("Clearing existing data...")
+
+        # Borrado en orden defensivo
+        try:
+            Workout.objects.all().delete()
+        except Exception as e:
+            self.stdout.write(self.style.WARNING(f"Could not clear Workout data: {e}"))
+
+        try:
+            Team.objects.all().delete()
+        except Exception as e:
+            self.stdout.write(self.style.WARNING(f"Could not clear Team data: {e}"))
+
+        try:
+            User.objects.all().delete()
+        except Exception as e:
+            self.stdout.write(self.style.WARNING(f"Could not clear User data: {e}"))
+
+        self.stdout.write("Creating safe seed data...")
 
         # Create teams
-        marvel = Team.objects.create(name='Marvel')
-        dc = Team.objects.create(name='DC')
+        marvel = Team.objects.create(name="Marvel")
+        dc = Team.objects.create(name="DC")
 
         # Create users
-        users = [
-            User.objects.create_user(username='ironman', email='ironman@marvel.com', password='password'),
-            User.objects.create_user(username='captainamerica', email='cap@marvel.com', password='password'),
-            User.objects.create_user(username='batman', email='batman@dc.com', password='password'),
-            User.objects.create_user(username='superman', email='superman@dc.com', password='password'),
-        ]
-
-        # Create activities
-        Activity.objects.create(user='ironman', team='Marvel', type='Running', duration=30)
-        Activity.objects.create(user='captainamerica', team='Marvel', type='Cycling', duration=45)
-        Activity.objects.create(user='batman', team='DC', type='Swimming', duration=60)
-        Activity.objects.create(user='superman', team='DC', type='Yoga', duration=20)
-
-        # Create leaderboard
-        Leaderboard.objects.create(team='Marvel', points=75)
-        Leaderboard.objects.create(team='DC', points=80)
+        ironman = User.objects.create_user(
+            username="ironman",
+            email="ironman@marvel.com",
+            password="password",
+        )
+        captainamerica = User.objects.create_user(
+            username="captainamerica",
+            email="cap@marvel.com",
+            password="password",
+        )
+        batman = User.objects.create_user(
+            username="batman",
+            email="batman@dc.com",
+            password="password",
+        )
+        superman = User.objects.create_user(
+            username="superman",
+            email="superman@dc.com",
+            password="password",
+        )
 
         # Create workouts
-        Workout.objects.create(name='Super Strength', description='Strength workout for heroes', suggested_for='Marvel')
-        Workout.objects.create(name='Stealth Moves', description='Agility workout for heroes', suggested_for='DC')
+        Workout.objects.create(
+            name="Super Strength",
+            description="Strength workout for heroes",
+        )
+        Workout.objects.create(
+            name="Stealth Moves",
+            description="Agility workout for heroes",
+        )
 
-        self.stdout.write(self.style.SUCCESS('octofit_db database populated with test data.'))
+        # Avisos explícitos: se omiten relaciones complejas por compatibilidad con Djongo
+        self.stdout.write(
+            self.style.WARNING(
+                "Skipped Team.members ManyToMany population due to Djongo/MongoDB ObjectId compatibility limitations."
+            )
+        )
+        self.stdout.write(
+            self.style.WARNING(
+                "Skipped Activity seed data due to ForeignKey/ObjectId compatibility limitations."
+            )
+        )
+        self.stdout.write(
+            self.style.WARNING(
+                "Skipped Leaderboard seed data due to ForeignKey/ObjectId compatibility limitations."
+            )
+        )
+        self.stdout.write(
+            self.style.WARNING(
+                "Skipped Workout.suggested_for ManyToMany population due to Djongo/MongoDB ObjectId compatibility limitations."
+            )
+        )
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                "Database populated successfully with safe base data: teams, users, and workouts."
+            )
+        )
